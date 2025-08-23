@@ -10,7 +10,7 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
 @auth_router.post("/signup", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    app = get_app
+    app = get_app()
 
     db_user = app.auth_handler.get_user_by_email(db, email=user.email)
     if db_user:

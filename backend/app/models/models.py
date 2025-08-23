@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, ForeignKey, DateTime, Enum as SQLAlchemyEnum
+from sqlalchemy import Column, Integer, String, JSON, ForeignKey, DateTime, Enum as SQLAlchemyEnum, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -16,6 +16,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
     
     workflows = relationship("Workflow", back_populates="owner")
 

@@ -14,5 +14,5 @@ class WorkflowService:
         return app.workflow_handler.create_workflow(db, workflow, user_id)
 
     def get_workflows(self, user_id: int, skip: int, limit: int, db: Session = Depends(get_db)):
-        app = get_app
+        app = get_app()
         return app.workflow_handler.get_workflows(db, user_id, skip, limit)

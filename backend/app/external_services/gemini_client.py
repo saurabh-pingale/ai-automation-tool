@@ -6,7 +6,7 @@ class GeminiClient:
     def __init__(self):
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-pro')
+            self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
             logger.info("Gemini client configured successfully.")
         except Exception as e:
             logger.error(f"Failed to configure Gemini client: {e}")

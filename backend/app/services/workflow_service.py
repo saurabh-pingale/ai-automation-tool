@@ -16,3 +16,11 @@ class WorkflowService:
     def get_workflows(self, user_id: int, skip: int, limit: int, db: Session = Depends(get_db)):
         app = get_app()
         return app.workflow_handler.get_workflows(db, user_id, skip, limit)
+    
+    def get_workflow_by_id(self, workflow_id: int, user_id: int, db: Session = Depends(get_db)):
+        app = get_app()
+        return app.workflow_handler.get_workflow_by_id(db, workflow_id, user_id)
+    
+    def update_workflow(self, workflow_id: int, user_id: int, workflow_data: schemas.WorkflowCreate, db: Session = Depends(get_db)):
+        app = get_app()
+        return app.workflow_handler.update_workflow(db, workflow_id, user_id, workflow_data)

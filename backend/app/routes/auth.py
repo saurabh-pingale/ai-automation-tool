@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models import schemas
 from app.utils.database import get_db
 from app.utils.app_utils import get_app
+from app.utils.exceptions import EmailAlreadyExistsError
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -14,7 +15,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     db_user = app.auth_handler.get_user_by_email(db, email=user.email)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise EmailAlreadyExistsError()
     
     return app.auth_handler.create_user(db=db, user=user)
 
@@ -24,7 +25,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 
     token_data = app.auth_service.login_for_access_token(form_data, db)
     if not token_data:
-        raise HTTPException(
+        raise HTTPException( 
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},

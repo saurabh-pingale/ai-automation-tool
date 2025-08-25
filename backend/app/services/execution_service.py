@@ -3,21 +3,22 @@ from sqlalchemy.orm import Session
 
 from app.utils.database import get_db
 from app.utils.app_utils import get_app
+from app.utils.exceptions import WorkflowNotFoundError, ExecutionNotFoundError
 
 class ExecutionService:
     def __init__(self):
         pass
 
-    async def execute_workflow(self, workflow_id: int, user_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    def execute_workflow(self, workflow_id: int, user_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
         app = get_app()
 
         workflow = app.workflow_handler.get_workflow_by_id(db, workflow_id, user_id)
         if not workflow:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
+            raise WorkflowNotFoundError()
         
         execution = app.execution_handler.create_execution_entry(db, workflow_id)
         
-        background_tasks.add_task(app.execution_handler.run_workflow, db, workflow, execution)
+        background_tasks.add_task(app.execution_handler.run_workflow, workflow_id, execution.id)
         
         return {"message": "Workflow execution started", "execution_id": execution.id}
     
@@ -37,6 +38,6 @@ class ExecutionService:
         
         execution = app.execution_handler.get_execution_by_id(db, execution_id, user_id)
         if not execution:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Execution not found")
+            raise ExecutionNotFoundError()
         
         return execution

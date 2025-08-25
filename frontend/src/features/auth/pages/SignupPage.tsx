@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertCircle, Workflow } from 'lucide-react';
+import { Workflow } from 'lucide-react';
 
 import { signupUser } from '../api';
 import { useAuth } from '../../../providers/AuthProvider';
+import { useError } from '../../../providers/ErrorProvider';
 import { Card } from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
@@ -13,19 +14,18 @@ export const SignupPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showError } = useError();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (password !== confirmPassword) {
-        setError("Passwords do not match");
+        showError("Passwords do not match");
         return;
     }
     setIsLoading(true);
-    setError(null);
     try {
       const signedUser = await signupUser({ email, password });
       if (signedUser.access_token) {
@@ -35,7 +35,7 @@ export const SignupPage: React.FC = () => {
         navigate('/login');
       }
     } catch (err) {
-        setError('Failed to sign up. Please try again.');
+        showError('Failed to sign up. Please try again.');
     } finally {
         setIsLoading(false);
     }
@@ -51,13 +51,6 @@ export const SignupPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
           <p className="text-gray-600 mt-2">Get started with your workflow automation</p>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg mb-4 flex items-center">
-            <AlertCircle className="w-5 h-5 mr-2" />
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

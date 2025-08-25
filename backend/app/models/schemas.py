@@ -13,8 +13,8 @@ class UserCreate(UserBase):
 class User(UserBase):
     id: int
     is_active: bool
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True) 
 
 class Token(BaseModel):
     access_token: str
@@ -34,14 +34,14 @@ class WorkflowCreate(WorkflowBase):
 class Workflow(WorkflowBase):
     id: int
     owner_id: int
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True) 
 
 class ExecutionBase(BaseModel):
     status: ExecutionStatus
     results: Optional[Dict[str, Any]] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
 class Execution(ExecutionBase):
     id: int

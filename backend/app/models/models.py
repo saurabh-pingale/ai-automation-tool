@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, JSON, ForeignKey, DateTime, Enum as SQLAlchemyEnum, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from datetime import datetime
 import enum
 
 from app.utils.database import Base
@@ -38,5 +39,6 @@ class Execution(Base):
     status = Column(SQLAlchemyEnum(ExecutionStatus), default=ExecutionStatus.PENDING)
     results = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     workflow = relationship("Workflow", back_populates="executions")

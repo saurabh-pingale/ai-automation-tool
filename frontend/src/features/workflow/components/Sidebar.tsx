@@ -1,4 +1,4 @@
-import { ArrowRightCircle, CheckCircle, Settings } from 'lucide-react';
+import { ArrowRightCircle, CheckCircle, Cpu, Settings } from 'lucide-react';
 import React from 'react';
 
 export const Sidebar = () => {
@@ -8,10 +8,10 @@ export const Sidebar = () => {
         event.dataTransfer.effectAllowed = 'move';
     };
 
-    const nodeTypes = [
-        { type: 'customInput', label: 'Input Node', icon: <ArrowRightCircle className="w-4 h-4" />, color: 'bg-green-100 text-green-700' },
-        { type: 'customDefault', label: 'Process Node', icon: <Settings className="w-4 h-4" />, color: 'bg-blue-100 text-blue-700' },
-        { type: 'customOutput', label: 'Output Node', icon: <CheckCircle className="w-4 h-4" />, color: 'bg-purple-100 text-purple-700' },
+     const nodeTypes = [
+        { type: 'text_input', label: 'Text Input', icon: <ArrowRightCircle className="w-5 h-5" />, color: 'text-green-700' },
+        { type: 'gemini_prompt', label: 'Gemini Node', icon: <Cpu className="w-5 h-5" />, color: 'text-blue-700' },
+        { type: 'output', label: 'Output Node', icon: <CheckCircle className="w-5 h-5" />, color: 'text-purple-700' },
     ];
 
     return (

@@ -17,14 +17,14 @@ export const Navbar = () => {
         <header className="bg-white shadow-sm border-b border-gray-100">
             <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
                 <Link to="/" className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <span className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                         <Workflow className="w-5 h-5 text-white" />
-                    </div>
+                    </span>
                     <span className="text-xl font-bold text-gray-900">FlowForge</span>
                 </Link>
                 
                 {isAuthenticated && (
-                    <div className="flex items-center space-x-4">
+                    <section className="flex items-center space-x-4">
                         <Button 
                             onClick={handleLogout} 
                             variant="secondary"
@@ -33,7 +33,7 @@ export const Navbar = () => {
                             <LogOut className="w-4 h-4" />
                             <span>Logout</span>
                         </Button>
-                    </div>
+                    </section>
                 )}
             </nav>
         </header>

@@ -14,3 +14,20 @@ class WorkflowHandler:
         
     def get_workflow_by_id(self, db: Session, workflow_id: int, user_id: int):
         return db.query(models.Workflow).filter(models.Workflow.id == workflow_id, models.Workflow.owner_id == user_id).first()
+    
+    def update_workflow(self, db: Session, workflow_id: int, user_id: int, workflow_data: schemas.WorkflowCreate):
+        workflow = db.query(models.Workflow).filter(
+            models.Workflow.id == workflow_id,
+            models.Workflow.owner_id == user_id
+        ).first()
+
+        if not workflow:
+            return None
+
+        workflow.name = workflow_data.name
+        workflow.nodes = workflow_data.nodes
+        workflow.edges = workflow_data.edges
+
+        db.commit()
+        db.refresh(workflow)
+        return workflow

@@ -6,6 +6,7 @@ from app.config import settings
 from app.utils.auth import create_access_token, verify_password
 from app.utils.database import get_db
 from app.utils.app_utils import get_app
+from app.utils.exceptions import InvalidCredentialsError
 
 class AuthService:
     def __init__(self):
@@ -15,7 +16,7 @@ class AuthService:
         app = get_app()
         user = app.auth_handler.get_user_by_email(db, email=form_data.username)
         if not user or not verify_password(form_data.password, user.hashed_password):
-            return None
+            raise InvalidCredentialsError()
         
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(

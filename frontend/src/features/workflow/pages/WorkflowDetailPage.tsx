@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Save } from 'lucide-react';
+import { Play, Save } from 'lucide-react';
 import ReactFlow, {
     ReactFlowProvider,
     addEdge,
@@ -14,13 +14,14 @@ import ReactFlow, {
     type Node,
 } from 'reactflow';
 
-import { getWorkflowById, updateWorkflow } from '../api';
+import { executeWorkflow, getExecutionDetails, getWorkflowById, updateWorkflow } from '../api';
 import { Sidebar } from '../components/Sidebar';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { Button } from '../../../components/ui/Button';
 import { Spinner } from '../../../components/ui/Spinner';
 import CustomNode from '../components/CustomNode';
-import type { Workflow, WorkflowNode } from '../../../types';
+import type { Execution, Workflow, WorkflowNode } from '../../../types';
+import { useError } from '../../../providers/ErrorProvider';
 
 const nodeTypes = {
     customInput: CustomNode,
@@ -39,28 +40,35 @@ export const WorkflowDetailPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+    const [isExecuting, setIsExecuting] = useState(false);
 
     const { workflowId } = useParams<{ workflowId: string }>();
+    const { showError } = useError();
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
+    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     
     const workflowIdNum = parseInt(workflowId!, 10);
+
+    const clearPolling = () => {
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+        }
+    };
 
     const fetchWorkflow = async () => {
         try {
             const data = await getWorkflowById(workflowIdNum);
             setWorkflow(data);
-            if (data.nodes && data.nodes.length > 0) {
-                const formattedNodes = data.nodes.map(node => ({
-                    ...node,
-                    position: typeof node.position === 'string' ? JSON.parse(node.position) : node.position,
-                }));
-                setNodes(formattedNodes);
-            } else {
-                setNodes([]);
-            }
+            id = data.nodes.length;
+            const formattedNodes = data.nodes.map(node => ({
+                ...node,
+                position: typeof node.position === 'string' ? JSON.parse(node.position) : node.position,
+            }));
+            setNodes(formattedNodes || []);
             setEdges(data.edges || []);
         } catch (error) {
-            console.error("Failed to fetch workflow", error);
+            showError('Failed to load workflow');
         } finally {
             setIsLoading(false);
         }
@@ -70,6 +78,8 @@ export const WorkflowDetailPage = () => {
         if (workflowIdNum) {
             fetchWorkflow();
         }
+
+        return () => clearPolling();
     }, [workflowIdNum, setNodes, setEdges]);
 
     const onConnect = useCallback((params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
@@ -86,6 +96,7 @@ export const WorkflowDetailPage = () => {
 
             const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
             const type = event.dataTransfer.getData('application/reactflow');
+            const label = event.dataTransfer.getData('text/plain');
 
             if (typeof type === 'undefined' || !type) return;
 
@@ -94,11 +105,19 @@ export const WorkflowDetailPage = () => {
                 y: event.clientY - reactFlowBounds.top,
             });
 
+            const defaultData = {
+                label: label || `${type} node`,
+                status: 'pending',
+                output: null,
+                error: null,
+                ...(type === 'text_input' && { text: 'Default input text...' }),
+            };
+
             const newNode: Node = {
                 id: getId(),
                 type,
                 position,
-                data: { label: `${type} node` },
+                data: defaultData,
             };
 
             setNodes((nds) => nds.concat(newNode));
@@ -117,13 +136,13 @@ export const WorkflowDetailPage = () => {
     const onUpdateNodeData = (nodeId: string, data: any) => {
         setNodes((nds) => 
             nds.map((node) => 
-                node.id === nodeId ? { ...node, data: data } : node
+                node.id === nodeId ? { ...node, data: {...node.data, ...data} } : node
             )
         );
         if (selectedNode && selectedNode.id === nodeId) {
-            setSelectedNode(prev => prev ? { ...prev, data } : null);
+            setSelectedNode(prev => prev ? { ...prev, data: { ...prev.data, ...data } } : null);
         }
-    }
+    };
 
     const handleSave = async () => {
         if (!workflow) return;
@@ -142,12 +161,104 @@ export const WorkflowDetailPage = () => {
                 nodes: nodeToSave,
                 edges: edges,
             });
-            alert('Workflow saved successfully!');
+            showError('Workflow saved successfully!', 'success');
         } catch (error) {
+            showError('Failed to save workflow');
             console.error("Failed to save workflow", error);
-            alert('Failed to save workflow.');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleExecute = async () => {
+        await handleSave();
+        setIsExecuting(true);
+        
+        setNodes((nds) =>
+            nds.map((node) => ({
+                ...node,
+                data: { ...node.data, status: 'pending', output: null, error: null },
+            }))
+        );
+
+        try {
+            const { execution_id } = await executeWorkflow(workflowIdNum);
+            
+            setNodes((nds) =>
+                nds.map((node) => ({
+                    ...node,
+                    data: { ...node.data, status: 'running' },
+                }))
+            );
+            
+            pollingIntervalRef.current = setInterval(async () => {
+                const details: Execution = await getExecutionDetails(execution_id);
+                
+                if (details.status === 'COMPLETED') {
+                    setNodes((nds) => 
+                        nds.map((node) => {
+                            const result = details.results?.[node.id];
+                            return { 
+                                ...node, 
+                                data: { 
+                                    ...node.data, 
+                                    status: 'completed', 
+                                    output: result || null,
+                                    error: null 
+                                } 
+                            };
+                        })
+                    );
+                    clearPolling();
+                    setIsExecuting(false);
+                    showError('Workflow executed successfully!', 'success');
+                } else if (details.status === 'FAILED') {
+                    setNodes((nds) => 
+                        nds.map((node) => {
+                            const error = details.results?.error;
+                            return { 
+                                ...node, 
+                                data: { 
+                                    ...node.data, 
+                                    status: 'failed', 
+                                    output: null,
+                                    error: typeof error === 'string' ? error : 'Execution failed' 
+                                } 
+                            };
+                        })
+                    );
+                    clearPolling();
+                    setIsExecuting(false);
+                    showError('Workflow execution failed.', 'error');
+                } else if (details.status === 'RUNNING') {
+                    setNodes((nds) => 
+                        nds.map((node) => {
+                            const result = details.results?.[node.id];
+                            if (result !== undefined && result !== null) {
+                                return { 
+                                    ...node, 
+                                    data: { 
+                                        ...node.data, 
+                                        status: 'completed', 
+                                        output: result,
+                                        error: null 
+                                    } 
+                                };
+                            }
+                            return node;
+                        })
+                    );
+                }
+            }, 1000);
+        } catch (error) {
+            showError('Failed to start workflow execution');
+            setIsExecuting(false);
+            setNodes((nds) =>
+                nds.map((node) => ({
+                    ...node,
+                    data: { ...node.data, status: 'pending', output: null, error: 'Failed to start execution' },
+                }))
+            );
         }
     };
     
@@ -160,7 +271,7 @@ export const WorkflowDetailPage = () => {
             <ReactFlowProvider>
                 <Sidebar />
                 <div className="flex-grow h-full relative" ref={reactFlowWrapper}>
-                    <div className="absolute top-4 right-80 z-10">
+                    <div className="absolute top-4 right-80 z-10 flex space-x-2">
                         <Button 
                             onClick={handleSave} 
                             isLoading={isSaving}
@@ -168,6 +279,16 @@ export const WorkflowDetailPage = () => {
                         >
                             <Save className="w-4 h-4 mr-2" />
                             {isSaving ? 'Saving...' : 'Save Workflow'}
+                        </Button>
+
+                        <Button 
+                            onClick={handleExecute} 
+                            isLoading={isExecuting} 
+                            className="shadow-md bg-green-600 hover:bg-green-700"
+                            disabled={nodes.length === 0}
+                        >
+                            <Play className="w-4 h-4 mr-2" />
+                            {isExecuting ? 'Executing...' : 'Run Workflow'}
                         </Button>
                     </div>
                     

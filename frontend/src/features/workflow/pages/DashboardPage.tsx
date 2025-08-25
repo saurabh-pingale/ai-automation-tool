@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Link2, Plus, Square, Workflow } from 'lucide-react';
 
 import { createWorkflow, getWorkflows } from '../api';
+import { useError } from '../../../providers/ErrorProvider';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Spinner } from '../../../components/ui/Spinner';
@@ -13,12 +14,14 @@ export const DashboardPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const navigate = useNavigate();
+    const { showError } = useError();
 
     const fetchWorkflows = async () => {
         try {
             const data = await getWorkflows();
             setWorkflows(data);
         } catch (error) {
+            showError('Failed to fetch workflows');
             console.error("Failed to fetch workflows", error);
         } finally {
             setIsLoading(false);
@@ -40,8 +43,8 @@ export const DashboardPage = () => {
             const newWorkflow = await createWorkflow(workflowPayload);
             navigate(`/workflow/${newWorkflow.id}`);
         } catch (error) {
+            showError('Failed to create workflow. Please try again.');
             console.error("Failed to create workflow:", error);
-            alert("Error: Could not create the workflow.");
         } finally {
             setIsCreating(false);
         }

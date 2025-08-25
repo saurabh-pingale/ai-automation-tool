@@ -10,14 +10,14 @@ from app.utils.app_utils import get_app
 execution_router = APIRouter(prefix="/execution", tags=["execution"])
 
 @execution_router.post("/workflow/{workflow_id}")
-async def execute_workflow(
+def execute_workflow(
     workflow_id: int,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     app = get_app()
-    return await app.execution_service.execute_workflow(
+    return app.execution_service.execute_workflow(
         workflow_id=workflow_id,
         user_id=current_user.id,
         background_tasks=background_tasks,
